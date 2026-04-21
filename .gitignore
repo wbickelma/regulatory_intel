@@ -1,0 +1,15 @@
+.env
+.env.*
+config/secrets.json
+node_modules/
+dist/
+.env
+circuit_openai_proxy.py
+circuit_scrapegraph_example.py
+*.log
+local_mode.db
+GEMINI.md
+AGENTS.MD
+onboarded_sites.csv
+test_*.py
+test_*.py.bak

@@ -2,44 +2,109 @@
 ORM Models
 ==========
 
-SQLAlchemy ORM model definitions for all database tables.
+SQLAlchemy ORM model definitions for the RSS-based pipeline.
 
 Tables:
-    Site
-        - id, url, domain, jurisdiction, status, created_by, created_at,
-          expected_update_frequency
-        - Represents a registered website submitted for monitoring.
+    Topic
+        - id, name, description, inoreader_folder_id, is_active, created_at
+        - Represents a regulatory topic mapped to an Inoreader folder.
 
-    SiteConfig
-        - id, site_id (FK), strategy (RSS/SITEMAP/SCRAPEGRAPHAI),
-          feed_url, sitemap_url, target_paths, confidence_score,
-          version, approved_at
-        - Stores the selected ingestion strategy and its parameters.
-          Versioned to support re-onboarding when sites change.
+    FeedConfig
+        - id, topic_id (FK), source_url, feed_url, inoreader_subscription_id,
+          name, is_active, created_at
+        - RSS feed configuration. source_url is the original website,
+          feed_url is the RSS.app generated feed.
 
-    SeenLink
-        - url_hash (PK), url, site_id (FK), first_seen, last_seen
-        - Deduplication table. Tracks every URL discovered to prevent
-          reprocessing on subsequent pipeline runs.
+    Article
+        - id, feed_id (FK), inoreader_item_id, title, source_url,
+          published_at, content_markdown, is_relevant, relevance_reasoning,
+          extracted_at
+        - Article extracted from Inoreader with LLM classification.
 
-    ArticleRaw
-        - id, site_id (FK), source_url, title, publication_date,
-          extraction_timestamp, content_path (GCS), content_length, status
-        - Metadata record for each extracted article. The actual markdown
-          content is stored in Google Cloud Storage; this table holds
-          the pointer and metadata.
-
-    Evaluation
-        - id, article_id (FK), relevance_score (1-5), category,
-          decision (pass/maybe/fail), justification, evaluated_at
-        - Stores the evaluator LLM's assessment of each article.
-
-    Summary
-        - id, run_id, run_date, content, sites_included,
-          article_count, created_at
-        - Stores the final generated regulatory briefing.
+    Report
+        - id, topic_id (FK, nullable), date_range_start, date_range_end,
+          summary_markdown, article_count, generated_at
+        - Generated executive briefing.
 
 Dependencies:
     - SQLAlchemy
-    - db.engine (Base declarative class)
+    - db.session (Base declarative class)
 """
+
+from datetime import datetime
+from uuid import uuid4
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+from db.session import Base
+
+
+class Topic(Base):
+    """Regulatory topic mapped to an Inoreader folder."""
+    
+    __tablename__ = "topics"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(200), nullable=False, unique=True)
+    description = Column(Text, default="")
+    inoreader_folder_id = Column(String(500), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    feeds = relationship("FeedConfig", back_populates="topic")
+    reports = relationship("Report", back_populates="topic")
+
+
+class FeedConfig(Base):
+    """RSS feed subscription configuration."""
+    
+    __tablename__ = "feed_configs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id"), nullable=False)
+    source_url = Column(String(2000), nullable=False)
+    feed_url = Column(String(2000), nullable=False)
+    inoreader_subscription_id = Column(String(500), nullable=False)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    topic = relationship("Topic", back_populates="feeds")
+    articles = relationship("Article", back_populates="feed")
+
+
+class Article(Base):
+    """Extracted article with classification status."""
+    
+    __tablename__ = "articles"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    feed_id = Column(UUID(as_uuid=True), ForeignKey("feed_configs.id"), nullable=True)
+    inoreader_item_id = Column(String(500), unique=True, nullable=False)
+    title = Column(String(1000), nullable=False)
+    source_url = Column(String(2000), nullable=False)
+    published_at = Column(DateTime, nullable=False)
+    content_markdown = Column(Text)
+    is_relevant = Column(Boolean, nullable=True)
+    relevance_reasoning = Column(Text, nullable=True)
+    extracted_at = Column(DateTime, default=datetime.utcnow)
+    
+    feed = relationship("FeedConfig", back_populates="articles")
+
+
+class Report(Base):
+    """Generated regulatory briefing."""
+    
+    __tablename__ = "reports"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    topic_id = Column(UUID(as_uuid=True), ForeignKey("topics.id"), nullable=True)
+    date_range_start = Column(DateTime, nullable=False)
+    date_range_end = Column(DateTime, nullable=False)
+    summary_markdown = Column(Text, nullable=False)
+    article_count = Column(Integer, default=0)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+    
+    topic = relationship("Topic", back_populates="reports")

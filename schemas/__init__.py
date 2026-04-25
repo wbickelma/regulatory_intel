@@ -2,19 +2,28 @@
 Schemas Package
 ===============
 
-Pydantic models that serve as the data contracts across the entire
-application. Every module — agents, gatherers, extractors, pipeline,
-and API — imports from this package to ensure consistent data shapes.
+Pydantic models for API requests/responses and internal data contracts.
 
 Modules:
-    - site: Models for site registration and configuration
-    - investigation: Models for GPT Researcher output and strategy selection
-    - article: Models for discovered links and extracted article content
-    - evaluation: Models for evaluation criteria and LLM evaluation results
-    - summary: Models for per-article and final briefing summaries
+    - topic: Topic (folder) management schemas
+    - feed: RSS feed configuration schemas  
+    - article: Article extraction and classification schemas
+    - report: Report generation schemas
 
 Design Principles:
-    - All inter-module data exchange uses these Pydantic models.
-    - Models include validation rules to catch malformed data early.
-    - Serialization to/from JSON is used for GCS storage and API responses.
+    - All API endpoints use these Pydantic models for validation.
+    - Models map to SQLAlchemy ORM models in db/models.py.
+    - Separate Create/Update/Response schemas per resource.
 """
+
+from .topic import TopicCreate, TopicUpdate, TopicResponse, TopicList
+from .feed import FeedCreate, FeedUpdate, FeedResponse, FeedList
+from .article import ArticleResponse, ArticleList, ArticleClassification
+from .report import ReportResponse, ReportList, ReportGenerate
+
+__all__ = [
+    "TopicCreate", "TopicUpdate", "TopicResponse", "TopicList",
+    "FeedCreate", "FeedUpdate", "FeedResponse", "FeedList",
+    "ArticleResponse", "ArticleList", "ArticleClassification",
+    "ReportResponse", "ReportList", "ReportGenerate",
+]

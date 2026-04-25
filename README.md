@@ -1,53 +1,99 @@
-# Regulatory News Summarizer
+# Regulatory Intelligence
 
-A multi-agent system that monitors government regulatory websites, extracts updates, evaluates their relevance, and produces concise regulatory briefings with links back to original sources.
+An automated system that monitors regulatory websites, aggregates content via RSS feeds, evaluates relevance, and generates executive briefings.
 
-Built with Python and deployed on Google Cloud Platform.
+Built with Python, FastAPI, and deployed on Google Cloud Platform.
 
 ---
 
 ## What It Does
 
-1. **Onboard** a government website by submitting its URL
-2. **Automatically determine** the best way to pull content from that site (RSS, Sitemap, or LLM-powered scraping)
-3. **Discover** new articles on a recurring schedule
-4. **Extract** article content as clean markdown
-5. **Evaluate** each article against relevance criteria using an LLM
-6. **Summarize** all relevant findings into a single briefing where every section links back to its source
+1. **Create Topics** — Define regulatory areas to monitor (e.g., "FDA Regulations", "SEC Filings")
+2. **Add Feeds** — Submit website URLs; the system generates RSS feeds via RSS.app and subscribes via Inoreader
+3. **Extract Articles** — Pull full article content from Inoreader within a configurable date range (default: 7 days)
+4. **Evaluate Relevance** — LLM classifies each article against topic-specific criteria
+5. **Generate Reports** — Synthesize relevant articles into executive briefings grouped by topic
 
-No per-website custom code is required. A new site can be onboarded in minutes.
+---
+
+## Architecture
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  RSS.app    │────▶│  Inoreader  │────▶│   FastAPI   │
+│ (Feed Gen)  │     │ (Aggregator)│     │  (Backend)  │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                               │
+                    ┌──────────────────────────┼──────────────────────────┐
+                    ▼                          ▼                          ▼
+             ┌─────────────┐            ┌─────────────┐            ┌─────────────┐
+             │ PostgreSQL  │            │   Gemini    │            │   Report    │
+             │  (Storage)  │            │   (LLM)     │            │  Delivery   │
+             └─────────────┘            └─────────────┘            └─────────────┘
+```
+
+### Key Components
+
+- **RSS.app API**: Generates RSS feeds from websites that don't natively offer them
+- **Inoreader API**: Aggregates feeds, organizes by folders (topics), extracts full article content
+- **Gemini LLM**: Evaluates article relevance and synthesizes summaries
+- **PostgreSQL**: Stores topics, feeds, articles, and reports
 
 ---
 
 ## How It Works
 
-The system has two main flows:
+### Onboarding a Feed
+1. Create a topic (maps to an Inoreader folder)
+2. Submit a source URL
+3. RSS.app generates a feed URL
+4. Inoreader subscribes to the feed in the topic's folder
 
-**Onboarding (one-time per site):**
-- User submits a URL
-- An investigator agent probes the site and selects an ingestion strategy
-- The strategy and configuration are saved to the database
+### Weekly Report Generation
+1. Extract articles from past 7 days via Inoreader API
+2. Classify each article for relevance using Gemini
+3. Synthesize relevant articles into a report grouped by topic
+4. Deliver via email or Slack
 
-**Scheduled Runs (recurring):**
-- Gather new article links using the site's configured strategy
-- Extract content from those links
-- Evaluate each article for relevance
-- Summarize the approved articles into a briefing with source links
+---
 
-### Strategy Waterfall
+## Quick Start
 
-When a new site is onboarded, the system selects the most reliable available method:
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-1. **RSS / Atom Feed** — preferred, most stable and metadata-rich
-2. **Sitemap XML** — good coverage, less metadata
-3. **ScrapeGraphAI** — fallback when no structured feeds exist
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
 
-### Summarization
+# Run the API
+uvicorn api.main:app --reload
+```
 
-Approved articles go through a map-reduce summarization process:
-- **Map:** Each article is individually summarized
-- **Reduce:** All summaries are synthesized into a single cohesive briefing
+---
 
-Every section of the final output links back to the original government source.
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/topics` | Create a new topic |
+| GET | `/topics` | List all topics |
+| POST | `/topics/{id}/feeds` | Add a feed to a topic |
+| GET | `/topics/{id}/articles?days=7` | Get recent articles |
+| POST | `/reports/generate` | Generate a report |
+| GET | `/reports/{id}` | Get report content |
+
+---
+
+## Configuration
+
+See `.env.example` for required environment variables:
+
+- `RSSAPP_API_KEY` — RSS.app API key
+- `INOREADER_API_KEY` — Inoreader API key  
+- `INOREADER_APP_ID` — Inoreader application ID
+- `GEMINI_API_KEY` — Google Gemini API key
+- `DATABASE_URL` — PostgreSQL connection string
 
 ---

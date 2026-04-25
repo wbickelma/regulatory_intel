@@ -11,5 +11,5 @@ local_mode.db
 GEMINI.md
 AGENTS.MD
 onboarded_sites.csv
-test_*.py
-test_*.py.bak
+#test_*.py
+#test_*.py.bak

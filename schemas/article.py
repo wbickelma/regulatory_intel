@@ -2,33 +2,59 @@
 Article Schemas
 ===============
 
-Pydantic models for discovered links and extracted article content.
+Pydantic models for articles extracted from Inoreader.
 
 Models:
-    DiscoveredLink
-        - A URL discovered by a gatherer (RSS, Sitemap, or ScrapeGraphAI).
-        - Fields: url, title (optional), publication_date (optional),
-                  source_strategy (RSS/SITEMAP/SCRAPEGRAPHAI)
-        - Note: RSS provides rich metadata; Sitemap and ScrapeGraphAI
-                may only provide the URL and possibly a date.
-
-    ArticleMetadata
-        - Metadata extracted alongside article content.
-        - Fields: source_url, title, publication_date, extraction_timestamp,
-                  site_id, content_path (GCS), content_length, status
-
-    RawArticle
-        - Full extracted article including content and metadata.
-        - Fields: metadata (ArticleMetadata), content (str — markdown text)
-
-Usage:
-    from schemas.article import DiscoveredLink, RawArticle
-
-    link = DiscoveredLink(url="https://sec.gov/news/press-release/2026-42")
-    article = RawArticle(metadata=metadata, content=markdown_text)
-
-Notes:
-    - content is the markdown text body, NOT stored in the database.
-      It lives in GCS at the path specified by metadata.content_path.
-    - status is one of: "extracted", "failed", "low_quality".
+    ArticleBase - Core article attributes from Inoreader stream
+    ArticleCreate - Internal schema for creating article records
+    ArticleResponse - API response schema with classification status
+    ArticleList - Paginated list response
+    ArticleClassification - Classification result from LLM
 """
+
+from datetime import datetime
+from uuid import UUID
+from pydantic import BaseModel, Field
+
+
+class ArticleBase(BaseModel):
+    """Base article attributes from Inoreader."""
+    title: str
+    source_url: str
+    published_at: datetime
+
+
+class ArticleCreate(ArticleBase):
+    """Schema for creating an article record."""
+    inoreader_item_id: str
+    content_markdown: str
+
+
+class ArticleResponse(ArticleBase):
+    """Schema for article API responses."""
+    id: UUID
+    feed_id: UUID | None
+    inoreader_item_id: str
+    content_markdown: str
+    is_relevant: bool | None
+    relevance_reasoning: str | None
+    extracted_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ArticleList(BaseModel):
+    """Schema for list of articles."""
+    articles: list[ArticleResponse]
+    total: int
+    topic_id: UUID | None = None
+    days: int = 7
+
+
+class ArticleClassification(BaseModel):
+    """Schema for article classification result."""
+    article_id: UUID
+    is_relevant: bool
+    reasoning: str
+    confidence: float = Field(ge=0.0, le=1.0)

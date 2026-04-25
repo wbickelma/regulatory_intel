@@ -57,12 +57,19 @@ class InoreaderAuthManager:
     AUTH_URL = "https://www.inoreader.com/oauth2/auth"
     TOKEN_URL = "https://www.inoreader.com/oauth2/token"
     
-    def __init__(self, app_id: str, app_key: str, token_path: str | None = None):
+    def __init__(
+        self,
+        app_id: str,
+        app_key: str,
+        access_token: str | None = None,
+        refresh_token: str | None = None,
+        token_path: str | None = None,
+    ):
         self.app_id = app_id
         self.app_key = app_key
         self.token_path = Path(token_path or self.TOKEN_FILE)
-        self._access_token: str | None = None
-        self._refresh_token: str | None = None
+        self._access_token: str | None = access_token
+        self._refresh_token: str | None = refresh_token
         self._expires_at: datetime | None = None
     
     def load_tokens(self) -> bool:

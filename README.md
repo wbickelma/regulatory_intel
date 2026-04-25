@@ -1,99 +1,109 @@
 # Regulatory Intelligence
 
-An automated system that monitors regulatory websites, aggregates content via RSS feeds, evaluates relevance, and generates executive briefings.
-
-Built with Python, FastAPI, and deployed on Google Cloud Platform.
-
----
-
-## What It Does
-
-1. **Create Topics** — Define regulatory areas to monitor (e.g., "FDA Regulations", "SEC Filings")
-2. **Add Feeds** — Submit website URLs; the system generates RSS feeds via RSS.app and subscribes via Inoreader
-3. **Extract Articles** — Pull full article content from Inoreader within a configurable date range (default: 7 days)
-4. **Evaluate Relevance** — LLM classifies each article against topic-specific criteria
-5. **Generate Reports** — Synthesize relevant articles into executive briefings grouped by topic
-
----
+Automated retrieval, summarization, and editorial filtering of regulatory publications using RSS feeds and LLM-powered analysis.
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  RSS.app    │────▶│  Inoreader  │────▶│   FastAPI   │
-│ (Feed Gen)  │     │ (Aggregator)│     │  (Backend)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                               │
-                    ┌──────────────────────────┼──────────────────────────┐
-                    ▼                          ▼                          ▼
-             ┌─────────────┐            ┌─────────────┐            ┌─────────────┐
-             │ PostgreSQL  │            │   Gemini    │            │   Report    │
-             │  (Storage)  │            │   (LLM)     │            │  Delivery   │
-             └─────────────┘            └─────────────┘            └─────────────┘
+[ User / Frontend ]
+        |
+        v
++------------------+         +------------------+
+|    RSS.app API   | ------> |  Inoreader API   |
+| Creates feeds    |         | Aggregates feeds |
+| from site URLs   |         | Organizes by     |
++------------------+         | topic folders    |
+                              +------------------+
+                                       |
+                                       v
+                              +------------------+
+                              |  Circuit LLM     |
+                              | (Azure OpenAI)   |
+                              | - Evaluate       |
+                              | - Summarize      |
+                              +------------------+
+                                       |
+                                       v
+                              [ Email Report ]
 ```
 
-### Key Components
+## Workflows
 
-- **RSS.app API**: Generates RSS feeds from websites that don't natively offer them
-- **Inoreader API**: Aggregates feeds, organizes by folders (topics), extracts full article content
-- **Gemini LLM**: Evaluates article relevance and synthesizes summaries
-- **PostgreSQL**: Stores topics, feeds, articles, and reports
+### Onboarding (one-time per site)
+1. User provides a site URL and selects a topic
+2. **RSS.app** generates an RSS feed URL for the site
+3. Feed is subscribed in **Inoreader** and placed in the topic's folder
 
----
+### Report Generation (recurring)
+1. Download entries from each **Inoreader** folder for a specified timeframe
+2. Evaluate each source for relevance using **Circuit LLM**
+3. Summarize each relevant article
+4. Compile and email the report
 
-## How It Works
+## Directory Structure
 
-### Onboarding a Feed
-1. Create a topic (maps to an Inoreader folder)
-2. Submit a source URL
-3. RSS.app generates a feed URL
-4. Inoreader subscribes to the feed in the topic's folder
+```
+regulatory_intelligence/
+├── clients/
+│   ├── __init__.py
+│   ├── rss_app.py              # RSS.app feed generation client
+│   └── inoreader.py            # Inoreader aggregation + OAuth client
+├── config/
+│   ├── __init__.py
+│   ├── settings.py             # Pydantic Settings (env vars)
+│   └── logging_config.py       # Structured JSON logging
+├── schemas/
+│   ├── __init__.py
+│   ├── topic.py                # Topic Pydantic models
+│   ├── feed.py                 # Feed Pydantic models
+│   ├── article.py              # Article Pydantic models
+│   └── report.py               # Report Pydantic models
+├── scripts/
+│   └── test_workflow.py        # End-to-end onboarding test
+├── circuit_scrapegraph_example.py  # Circuit LLM auth reference
+├── .env                        # API credentials (not committed)
+├── .gitignore
+├── AGENTS.md
+├── GEMINI.md
+├── README.md
+├── requirements.txt
+├── pyproject.toml
+└── setup.sh
+```
 
-### Weekly Report Generation
-1. Extract articles from past 7 days via Inoreader API
-2. Classify each article for relevance using Gemini
-3. Synthesize relevant articles into a report grouped by topic
-4. Deliver via email or Slack
-
----
-
-## Quick Start
+## Setup
 
 ```bash
-# Install dependencies
+# Create conda environment
+bash setup.sh
+
+# Or manually:
+conda create -n reg_intel python=3.11 -y
+conda activate reg_intel
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
-
-# Run the API
-uvicorn api.main:app --reload
 ```
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/topics` | Create a new topic |
-| GET | `/topics` | List all topics |
-| POST | `/topics/{id}/feeds` | Add a feed to a topic |
-| GET | `/topics/{id}/articles?days=7` | Get recent articles |
-| POST | `/reports/generate` | Generate a report |
-| GET | `/reports/{id}` | Get report content |
-
----
 
 ## Configuration
 
-See `.env.example` for required environment variables:
+Copy `.env.example` to `.env` and fill in your credentials:
 
-- `RSSAPP_API_KEY` — RSS.app API key
-- `INOREADER_API_KEY` — Inoreader API key  
-- `INOREADER_APP_ID` — Inoreader application ID
-- `GEMINI_API_KEY` — Google Gemini API key
-- `DATABASE_URL` — PostgreSQL connection string
+| Variable | Description |
+|---|---|
+| `CIRCUIT_CLIENT_ID` | Circuit API OAuth2 client ID |
+| `CIRCUIT_CLIENT_SECRET` | Circuit API OAuth2 client secret |
+| `CIRCUIT_APPKEY` | Circuit API application key |
+| `CLIENT_ID_INOREADER` | Inoreader OAuth2 application ID |
+| `CLIENT_SECRET_INOREADER` | Inoreader OAuth2 application secret |
+| `INOREADER_ACCESS_TOKEN` | Inoreader OAuth2 access token |
+| `INOREADER_REFRESH_TOKEN` | Inoreader OAuth2 refresh token |
+| `RSS_APP_KEY` | RSS.app API key |
+| `RSS_APP_SECRET` | RSS.app API secret |
 
----
+## Usage
+
+### Test the onboarding workflow
+```bash
+python scripts/test_workflow.py
+```
+
+This runs the full flow: RSS.app feed generation → Inoreader subscription → article retrieval.

@@ -3,7 +3,8 @@
 .env.*
 config/secrets.json
 inoreader_tokens.json
-
+AGENTS.md
+GEMINI.md
 # Python
 __pycache__/
 *.pyc

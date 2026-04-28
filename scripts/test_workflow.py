@@ -105,6 +105,23 @@ def main():
 
     articles = inoreader.get_folder_articles_sync(TARGET_FOLDER, days_back=DAYS_BACK)
 
+    # --- Step 4: Fetch Full Content ---
+    CONTENT_PREVIEW_LIMIT = 3
+    print(f"\n[STEP 4] Fetching full content for first {CONTENT_PREVIEW_LIMIT} articles via Mobilizer...")
+
+    for article in articles[:CONTENT_PREVIEW_LIMIT]:
+        print(f"\n{'─' * 60}")
+        print(f"📰 {article.title}")
+        print(f"🔗 {article.url}")
+        content = inoreader.get_article_content_sync(article.item_id)
+        if content:
+            # Strip HTML for readable preview
+            plain = InoreaderClient._strip_html(content)
+            preview = plain[:500] + ("..." if len(plain) > 500 else "")
+            print(f"📄 Content preview:\n{preview}")
+        else:
+            print("⚠️  No full content available (Mobilizer returned empty/error)")
+
     # --- Summary ---
     print("\n" + "=" * 60)
     print("📊 WORKFLOW SUMMARY")
@@ -113,6 +130,7 @@ def main():
     print(f"RSS Feed URL:   {feed_url}")
     print(f"Target Folder:  {TARGET_FOLDER}")
     print(f"Articles Found: {len(articles)}")
+    print(f"Full Content:   Fetched for {min(CONTENT_PREVIEW_LIMIT, len(articles))} articles")
     print("=" * 60)
 
 

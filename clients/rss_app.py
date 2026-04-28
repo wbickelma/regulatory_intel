@@ -1,3 +1,4 @@
+from __future__ import annotations
 """RSS.app API client for generating RSS feeds from website URLs.
 
 Implements feed discovery before creation to avoid duplicates.

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Inoreader API client for feed aggregation and article extraction.
 
 Supports OAuth2 authentication with token refresh.
@@ -73,7 +74,11 @@ class InoreaderAuthManager:
         self._expires_at: datetime | None = None
     
     def load_tokens(self) -> bool:
-        """Load tokens from file."""
+        """Load tokens from file, but only if no tokens were provided at init."""
+        # If tokens were provided via constructor (e.g. from .env), keep them
+        if self._access_token:
+            return True
+        
         if not self.token_path.exists():
             return False
         
@@ -539,6 +544,71 @@ class InoreaderClient:
             print(f"🔗 {link}\n")
         
         return articles
+    
+    def get_article_content_sync(self, item_id: str) -> Optional[str]:
+        """Fetch full article content via the Mobilizer API (sync).
+        
+        Uses GET /reader/api/0/mobilize to load the full content
+        for a given article.
+        
+        Args:
+            item_id: The Inoreader item ID (long or short format).
+            
+        Returns:
+            Full article content HTML string, or None on failure.
+        """
+        access_token = self.auth_manager.get_access_token_sync()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        short_id = self._to_short_id(item_id)
+        
+        response = requests.get(
+            f"{self.BASE_URL}/mobilize",
+            headers=headers,
+            params={
+                "AppId": self.app_id,
+                "AppKey": self.app_key,
+                "i": short_id,
+            }
+        )
+        
+        if response.status_code == 503:
+            logger.warning(f"Mobilizer returned 503 for item {short_id}")
+            return None
+        
+        if response.status_code != 200:
+            logger.warning(f"Mobilizer error {response.status_code}: {response.text}")
+            return None
+        
+        # Response body may be plain text "Error" or empty even on 200
+        try:
+            data = response.json()
+        except (requests.exceptions.JSONDecodeError, ValueError):
+            body_preview = response.text[:200] if response.text else "(empty)"
+            logger.warning(f"Mobilizer returned non-JSON for item {short_id}: {body_preview}")
+            return None
+        
+        return data.get("content")
+    
+    @staticmethod
+    def _to_short_id(item_id: str) -> str:
+        """Convert a long-form Inoreader item ID to short format.
+        
+        Long format:  'tag:google.com,2005:reader/item/00000000148b9369'
+        Short format: '344691561'  (hex → signed base-10 decimal)
+        
+        If already a decimal string, returns as-is.
+        """
+        if "/" in item_id:
+            hex_str = item_id.rsplit("/", 1)[-1]
+        else:
+            hex_str = item_id
+        
+        # Convert 16-char unsigned hex to signed 64-bit decimal
+        value = int(hex_str, 16)
+        if value >= (1 << 63):
+            value -= (1 << 64)
+        return str(value)
     
     async def close(self):
         if self._client:

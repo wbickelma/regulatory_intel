@@ -48,6 +48,8 @@ def main():
             "url": a.url,
             "published_at": a.published_at.isoformat(),
             "summary": a.summary or "",
+            "full_content": a.full_content or "",
+            "relevance_score": a.relevance_score,
         }
         for a in articles
     ]

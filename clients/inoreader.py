@@ -8,7 +8,7 @@ Provides both sync and async methods for flexibility.
 import json
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -39,6 +39,24 @@ class ArticleItem:
     url: str
     published_at: datetime
     summary: Optional[str] = None
+    full_content: Optional[str] = None
+    relevance_score: Optional[int] = None
+    evaluation: Optional[dict] = field(default=None, repr=False)
+
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-safe dict."""
+        d = asdict(self)
+        d["published_at"] = self.published_at.isoformat()
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ArticleItem":
+        """Deserialize from a dict."""
+        data = dict(d)
+        pub = data.get("published_at")
+        if isinstance(pub, str):
+            data["published_at"] = datetime.fromisoformat(pub)
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
 @dataclass

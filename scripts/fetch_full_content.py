@@ -61,6 +61,9 @@ def main():
             print("⚠️  No full content available (Mobilizer returned empty/error)")
             article["full_content"] = ""
 
+        # Preserve relevance_score (default to null if not present)
+        article.setdefault("relevance_score", None)
+
     # Save enriched data
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(articles, f, indent=2, ensure_ascii=False)

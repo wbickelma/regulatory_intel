@@ -1,0 +1,39 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # 12 PM UTC (8 AM EST) daily
+  workflow_dispatch:  # Manual trigger from GitHub UI
+
+jobs:
+  scrape-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+      
+      - name: Run pipeline
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+          GCS_CLIENT_EMAIL: ${{ secrets.GCS_CLIENT_EMAIL }}
+          GCS_PRIVATE_KEY: ${{ secrets.GCS_PRIVATE_KEY }}
+          GCS_PRIVATE_KEY_ID: ${{ secrets.GCS_PRIVATE_KEY_ID }}
+          CLIENT_ID_INOREADER: ${{ secrets.CLIENT_ID_INOREADER }}
+          CLIENT_SECRET_INOREADER: ${{ secrets.CLIENT_SECRET_INOREADER }}
+          INOREADER_ACCESS_TOKEN: ${{ secrets.INOREADER_ACCESS_TOKEN }}
+          INOREADER_REFRESH_TOKEN: ${{ secrets.INOREADER_REFRESH_TOKEN }}
+          CIRCUIT_API_KEY: ${{ secrets.CIRCUIT_API_KEY }}
+        run: python scripts/test_gcs.py

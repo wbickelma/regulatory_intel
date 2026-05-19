@@ -38,8 +38,10 @@ class ArticleItem:
     title: str
     url: str
     published_at: datetime
+    source: Optional[str] = None
     summary: Optional[str] = None
     full_content: Optional[str] = None
+    ai_summary: Optional[str] = None
     relevance_score: Optional[int] = None
     evaluation: Optional[dict] = field(default=None, repr=False)
 
@@ -373,6 +375,7 @@ class InoreaderClient:
                 title=item.get("title", ""),
                 url=item.get("canonical", [{}])[0].get("href", ""),
                 published_at=datetime.fromtimestamp(item.get("published", 0)),
+                source=item.get("origin", {}).get("title"),
                 summary=item.get("summary", {}).get("content")
             ))
         return items
@@ -554,6 +557,7 @@ class InoreaderClient:
                 title=title,
                 url=link,
                 published_at=pub_date,
+                source=item.get("origin", {}).get("title"),
                 summary=item.get("summary", {}).get("content")
             ))
             

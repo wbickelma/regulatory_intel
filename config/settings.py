@@ -20,6 +20,8 @@ Environment Variables:
     CLIENT_SECRET_INOREADER - Inoreader OAuth2 application secret
     RSS_APP_KEY           - RSS.app API key
     RSS_APP_SECRET        - RSS.app API secret
+    GCP_PROJECT_ID        - Google Cloud project ID
+    GCS_BUCKET_NAME       - GCS bucket for storing results
     LOG_LEVEL             - Logging level (DEBUG, INFO, WARNING, ERROR)
 
 Notes:
@@ -27,6 +29,7 @@ Notes:
 """
 
 from pathlib import Path
+from typing import List
 
 from pydantic_settings import BaseSettings
 
@@ -53,6 +56,19 @@ class Settings(BaseSettings):
     rss_app_key: str = ""
     rss_app_secret: str = ""
 
+    # --- Gemini API ---
+    gemini_api_key: str = ""
+
+    # --- GCP / Cloud Storage ---
+    # GCS credentials loaded via os.getenv() directly in gcs_client.py
+    # to avoid pydantic parsing issues with multiline private keys.
+    # Required env vars: GCP_PROJECT_ID, GCS_CLIENT_EMAIL, GCS_PRIVATE_KEY
+    gcs_bucket_name: str = "regulatory-intelligence-results"
+
+    # --- Pipeline Settings ---
+    relevance_threshold: int = 6
+    days_back: int = 1
+
     # --- Operational ---
     log_level: str = "INFO"
 
@@ -62,5 +78,25 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
 
+
+# Topic folders to process (Inoreader folder names)
+TOPIC_FOLDERS: List[str] = [
+    "Antitrust",
+    "Trade and Export",
+    "Labor & Workforce",
+    "Hardware Manufacturing",
+    "Financial Reporting & Tax",
+    "AI Telecom",
+    "AI Governance",
+    "Supply Chain",
+    "test_folder1",
+    "Environmental Sustainability",
+    "Data Protecton and Privacy",
+    "Competition/Antitrust",
+    "AI / Data / Networking & Security Technologies",
+    "AI & Emerging Technology Governance",
+    "Telecom",
+    "Cybersecurity"
+]
 
 settings = Settings()

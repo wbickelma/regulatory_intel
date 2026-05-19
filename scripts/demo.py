@@ -36,6 +36,7 @@ from common import (
 from evaluation.scorer import evaluate_articles
 from summarize import ReportSummarizer
 from clients.email_client import EmailClient
+from clients.content_fetcher import fetch_content_with_fallback
 
 SOURCE_URL = (
     "https://www.skadden.com/insights"
@@ -98,15 +99,28 @@ def main():
         print(f"\n{'─' * 60}")
         print(f"📰 {article.title}")
         print(f"🔗 {article.url}")
+        
+        # Try Inoreader Mobilizer first
         content = inoreader.get_article_content_sync(article.item_id)
         if content:
             plain = inoreader._strip_html(content)
-            preview = plain[:500] + ("..." if len(plain) > 500 else "")
+            if plain and len(plain.strip()) >= 100:
+                article.full_content = plain
+        
+        # If Inoreader failed, use fallback chain (modifies article in-place)
+        if not article.full_content:
+            print("⚠️  Inoreader empty — trying fallback methods...")
+            fetch_content_with_fallback(article)
+        
+        # Show result
+        if article.full_content:
+            preview = article.full_content[:500] + ("..." if len(article.full_content) > 500 else "")
             print(f"📄 Content preview:\n{preview}")
-            article.full_content = plain
+        elif article.ai_summary:
+            preview = article.ai_summary[:500] + ("..." if len(article.ai_summary) > 500 else "")
+            print(f"🤖 AI Summary preview:\n{preview}")
         else:
-            print("⚠️  No full content available (Mobilizer returned empty/error)")
-            article.full_content = ""
+            print("❌ All content fetch methods failed")
 
     # Re-save with full content included
     if high_scorers:

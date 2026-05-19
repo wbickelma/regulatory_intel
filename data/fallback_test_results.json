@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-05-16T15:12:47.805806",
+  "total_failed": 1,
+  "tested_count": 1,
+  "fallback_tests": [
+    {
+      "title": "736th Meeting of the Advisory Committee on Reactor Safeguards (ACRS)",
+      "url": "https://www.federalregister.gov/documents/2026/05/18/2026-09914/736th-meeting-of-the-advisory-committee-on-reactor-safeguards-acrs",
+      "source": "Federal Register All Documents",
+      "success": true,
+      "full_content_length": 12188,
+      "ai_summary_length": 0,
+      "method_used": "playwright"
+    }
+  ]
+}

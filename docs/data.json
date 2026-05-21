@@ -1,0 +1,419 @@
+{
+  "users": [
+    {
+      "user_id": 2,
+      "name": "Ray Liang",
+      "email": "rayliang@cisco.com",
+      "is_active": true,
+      "topic_ids": [
+        7,
+        6,
+        10,
+        11,
+        1,
+        4,
+        2,
+        8,
+        12,
+        13,
+        14,
+        3,
+        9,
+        5,
+        15,
+        16
+      ],
+      "topic_names": [
+        " Networking & Security Technologies",
+        "AI & Emerging Technology Governance",
+        "AI Governance",
+        "AI Telecom",
+        "Antitrust",
+        "Cybersecurity",
+        "Data Protecton and Privacy",
+        "Environmental Sustainability",
+        "Financial Reporting & Tax",
+        "Hardware Manufacturing",
+        "Labor & Workforce",
+        "Software & Cloud Services",
+        "Supply Chain",
+        "Telecom",
+        "Trade and Export",
+        "test_folder1"
+      ]
+    },
+    {
+      "user_id": 1,
+      "name": "Will Bickelmann",
+      "email": "wbickelm@cisco.com",
+      "is_active": true,
+      "topic_ids": [
+        7,
+        6,
+        10,
+        11,
+        1,
+        4,
+        2,
+        8,
+        12,
+        13,
+        14,
+        3,
+        9,
+        5,
+        15,
+        16
+      ],
+      "topic_names": [
+        " Networking & Security Technologies",
+        "AI & Emerging Technology Governance",
+        "AI Governance",
+        "AI Telecom",
+        "Antitrust",
+        "Cybersecurity",
+        "Data Protecton and Privacy",
+        "Environmental Sustainability",
+        "Financial Reporting & Tax",
+        "Hardware Manufacturing",
+        "Labor & Workforce",
+        "Software & Cloud Services",
+        "Supply Chain",
+        "Telecom",
+        "Trade and Export",
+        "test_folder1"
+      ]
+    }
+  ],
+  "topics": [
+    {
+      "topic_id": 7,
+      "topic_name": " Networking & Security Technologies",
+      "source_count": 4
+    },
+    {
+      "topic_id": 6,
+      "topic_name": "AI & Emerging Technology Governance",
+      "source_count": 3
+    },
+    {
+      "topic_id": 10,
+      "topic_name": "AI Governance",
+      "source_count": 6
+    },
+    {
+      "topic_id": 11,
+      "topic_name": "AI Telecom",
+      "source_count": 8
+    },
+    {
+      "topic_id": 1,
+      "topic_name": "Antitrust",
+      "source_count": 8
+    },
+    {
+      "topic_id": 4,
+      "topic_name": "Cybersecurity",
+      "source_count": 6
+    },
+    {
+      "topic_id": 2,
+      "topic_name": "Data Protecton and Privacy",
+      "source_count": 8
+    },
+    {
+      "topic_id": 8,
+      "topic_name": "Environmental Sustainability",
+      "source_count": 6
+    },
+    {
+      "topic_id": 12,
+      "topic_name": "Financial Reporting & Tax",
+      "source_count": 7
+    },
+    {
+      "topic_id": 13,
+      "topic_name": "Hardware Manufacturing",
+      "source_count": 6
+    },
+    {
+      "topic_id": 14,
+      "topic_name": "Labor & Workforce",
+      "source_count": 6
+    },
+    {
+      "topic_id": 3,
+      "topic_name": "Software & Cloud Services",
+      "source_count": 4
+    },
+    {
+      "topic_id": 9,
+      "topic_name": "Supply Chain",
+      "source_count": 7
+    },
+    {
+      "topic_id": 5,
+      "topic_name": "Telecom",
+      "source_count": 8
+    },
+    {
+      "topic_id": 15,
+      "topic_name": "Trade and Export",
+      "source_count": 4
+    },
+    {
+      "topic_id": 16,
+      "topic_name": "test_folder1",
+      "source_count": 4
+    }
+  ],
+  "sources": [
+    {
+      "source_id": 6,
+      "source_name": "Bills Presented to the President",
+      "feed_url": "https://www.congress.gov/rss/presented-to-president.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 5,
+      "source_name": "Canada Gazette - Part I",
+      "feed_url": "https://www.gazette.gc.ca/rss/p1-eng.xml",
+      "country_code": "CA",
+      "is_active": true
+    },
+    {
+      "source_id": 14,
+      "source_name": "Canada News Centre - Innovation, Science and Economic Development Canada",
+      "feed_url": "https://www.canada.ca/en/innovation-science-economic-development.atom.xml",
+      "country_code": "JP",
+      "is_active": true
+    },
+    {
+      "source_id": 16,
+      "source_name": "Cybersecurity Insights",
+      "feed_url": "https://www.nist.gov/blogs/cybersecurity-insights/rss.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 13,
+      "source_name": "EDBP News",
+      "feed_url": "https://edpb.europa.eu/feed/news_en",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 18,
+      "source_name": "EDPB publications",
+      "feed_url": "https://edpb.europa.eu/feed/publications_en",
+      "country_code": "EU",
+      "is_active": true
+    },
+    {
+      "source_id": 4,
+      "source_name": "EUR-Lex",
+      "feed_url": "https://eur-lex.europa.eu/EN/display-feed.rss?rssId=162",
+      "country_code": "EU",
+      "is_active": true
+    },
+    {
+      "source_id": 19,
+      "source_name": "FCC Recent Releases",
+      "feed_url": "https://api2.fcc.gov/api/exp/v1.0.0/edocspublic/rss",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 17,
+      "source_name": "FDA Press Releases RSS Feed",
+      "feed_url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 3,
+      "source_name": "FTC Press Release Feed",
+      "feed_url": "https://www.ftc.gov/feeds/press-release.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 10,
+      "source_name": "Federal Register All Documents",
+      "feed_url": "https://www.federalregister.gov/api/v1/documents.rss",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 2,
+      "source_name": "Federal Trade Commission - Protecting America's Consumers",
+      "feed_url": "https://www.ftc.gov/feeds/press-release-consumer-protection.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 9,
+      "source_name": "Financial Conduct Authority (FCA)",
+      "feed_url": "https://www.fca.org.uk/news/rss.xml",
+      "country_code": "GB",
+      "is_active": true
+    },
+    {
+      "source_id": 23,
+      "source_name": "Have Your Say",
+      "feed_url": "https://rss.app/feeds/KyawcYkROTe0s3dW.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 8,
+      "source_name": "House Floor Today",
+      "feed_url": "https://www.congress.gov/rss/house-floor-today.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 24,
+      "source_name": "IMDA",
+      "feed_url": "https://rss.app/feeds/pxrs7eIIrKWlYwcc.xml",
+      "country_code": "SG",
+      "is_active": true
+    },
+    {
+      "source_id": 11,
+      "source_name": "Information technology News and Events",
+      "feed_url": "https://www.nist.gov/news-events/information%20technology/rss.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 29,
+      "source_name": "Insights | Skadden, Arps, Slate, Meagher & Flom LLP",
+      "feed_url": "https://rss.app/feeds/OQjjnwHJflHsq1D5.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 30,
+      "source_name": "Insights | Skadden, Arps, Slate, Meagher & Flom LLP",
+      "feed_url": "https://rss.app/feeds/8xp9xuP0lgOfGQsU.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 25,
+      "source_name": "MIC ICT Policy",
+      "feed_url": "https://rss.app/feeds/z3Tegw9517yae4hN.xml",
+      "country_code": "JP",
+      "is_active": true
+    },
+    {
+      "source_id": 12,
+      "source_name": "NIST Events",
+      "feed_url": "https://www.nist.gov/news-events/events/rss.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 22,
+      "source_name": "News and updates (Ofcom)",
+      "feed_url": "webfeed://https%3A%2F%2Fwww.ofcom.org.uk%2Fnews-and-updates--3f54c5b1",
+      "country_code": "GB",
+      "is_active": true
+    },
+    {
+      "source_id": 27,
+      "source_name": "News articles | ACMA",
+      "feed_url": "https://rss.app/feeds/DWODZKzNiWafDeCa.xml",
+      "country_code": "AU",
+      "is_active": true
+    },
+    {
+      "source_id": 28,
+      "source_name": "OAIC",
+      "feed_url": "https://rss.app/feeds/CzDflLAawlF3ycka.xml",
+      "country_code": "AU",
+      "is_active": true
+    },
+    {
+      "source_id": 15,
+      "source_name": "Office of Privacy Commissioner (OPC)",
+      "feed_url": "https://www.priv.gc.ca/en/rss/news/",
+      "country_code": "CA",
+      "is_active": true
+    },
+    {
+      "source_id": 21,
+      "source_name": "On The Record",
+      "feed_url": "https://feeds.cfr.org/issue/cybersecurity",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 26,
+      "source_name": "Personal Information Protection Commission, Japan |PPC Personal Information Protection Commission,Japan",
+      "feed_url": "webfeed://https%3A%2F%2Fwww.ppc.go.jp%2Fen%2F--5f6efda4",
+      "country_code": "JP",
+      "is_active": true
+    },
+    {
+      "source_id": 20,
+      "source_name": "Publications | ENISA",
+      "feed_url": "https://morss.it/:items=%7C%7C*%5Bclass=publication-content%5D%7C%7Ch3%7Ca/https://www.enisa.europa.eu/publications",
+      "country_code": "EU",
+      "is_active": true
+    },
+    {
+      "source_id": 7,
+      "source_name": "Senate Floor Today",
+      "feed_url": "https://www.congress.gov/rss/senate-floor-today.xml",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
+      "source_id": 1,
+      "source_name": "legislation.gov",
+      "feed_url": "https://www.legislation.gov.uk/new/data.feed",
+      "country_code": "GB",
+      "is_active": true
+    },
+    {
+      "source_id": 31,
+      "source_name": "\u05d0\u05e8\u05db\u05d9\u05d5\u05df Cyber",
+      "feed_url": "https://rss.app/feeds/Pwzy0eGKqa7ZKR5B.xml",
+      "country_code": "US",
+      "is_active": true
+    }
+  ],
+  "countries": [
+    {
+      "country_code": "AU",
+      "country_name": "Australia"
+    },
+    {
+      "country_code": "CA",
+      "country_name": "Canada"
+    },
+    {
+      "country_code": "EU",
+      "country_name": "European Union"
+    },
+    {
+      "country_code": "JP",
+      "country_name": "Japan"
+    },
+    {
+      "country_code": "SG",
+      "country_name": "Singapore"
+    },
+    {
+      "country_code": "GB",
+      "country_name": "United Kingdom"
+    },
+    {
+      "country_code": "US",
+      "country_name": "United States"
+    }
+  ]
+}

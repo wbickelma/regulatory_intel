@@ -35,7 +35,7 @@ from clients.inoreader import InoreaderClient, InoreaderAuthManager
 
 # Test parameters
 SOURCE_URL = "https://www.fedramp.gov/blog/1/"
-TARGET_FOLDER = "test_folder2"
+TARGET_FOLDER = "Cybersecurity"
 DAYS_BACK = 5
 
 

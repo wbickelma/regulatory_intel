@@ -3,9 +3,7 @@
 Fallback order:
 1. Playwright stealth browser (most stealthy, avoids bot detection)
    -> Populates ArticleItem.full_content
-2. ScrapegraphAI with Circuit LLM (AI-powered extraction)
-   -> Populates ArticleItem.ai_summary
-3. Gemini with grounding search (summarize via Google Search)
+2. GCP Gemini with grounding search (summarize via Google Search)
    -> Populates ArticleItem.ai_summary
 """
 from __future__ import annotations
@@ -13,10 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-import base64
 from typing import Optional, TYPE_CHECKING
-
-import requests
 from bs4 import BeautifulSoup
 
 if TYPE_CHECKING:
@@ -29,18 +24,18 @@ class ContentFetcher:
     """Fetches article content with multiple fallback strategies."""
 
     def __init__(self):
-        self._circuit_token: Optional[str] = None
         self._gemini_client = None
 
-    def fetch_content(self, article: "ArticleItem") -> bool:
+    def fetch_content(self, article: "ArticleItem", use_playwright: bool = True) -> bool:
         """Fetch article content using fallback chain.
         
         Modifies the article in-place:
         - Playwright success -> sets article.full_content
-        - ScrapegraphAI/Gemini success -> sets article.ai_summary
+        - Gemini grounding success -> sets article.ai_summary
         
         Args:
             article: ArticleItem to populate
+            use_playwright: If True, try Playwright first. If False, skip to Gemini.
             
         Returns:
             True if any method succeeded, False otherwise.
@@ -53,27 +48,20 @@ class ContentFetcher:
         url = article.url
         title = article.title or ""
 
-        # Method 1: Playwright stealth -> full_content
-        logger.info(f"[Fallback 1] Trying Playwright stealth for: {url}")
-        content = self._fetch_with_playwright(url)
-        if content and len(content.strip()) > 100:
-            logger.info(f"[Fallback 1] ✅ Playwright succeeded ({len(content)} chars)")
-            article.full_content = content
-            return True
+        # Method 1: Playwright stealth -> full_content (if enabled)
+        if use_playwright:
+            logger.info(f"[Fallback 1] Trying Playwright stealth for: {url}")
+            content = self._fetch_with_playwright(url)
+            if content and len(content.strip()) > 100:
+                logger.info(f"[Fallback 1] ✅ Playwright succeeded ({len(content)} chars)")
+                article.full_content = content
+                return True
 
-        # Method 2: ScrapegraphAI -> ai_summary
-        logger.info(f"[Fallback 2] Trying ScrapegraphAI for: {url}")
-        content = self._fetch_with_scrapegraph(url)
-        if content and len(content.strip()) > 100:
-            logger.info(f"[Fallback 2] ✅ ScrapegraphAI succeeded ({len(content)} chars)")
-            article.ai_summary = content
-            return True
-
-        # Method 3: Gemini grounding with search -> ai_summary
-        logger.info(f"[Fallback 3] Trying Gemini grounding for: {url}")
+        # Method 2: Gemini grounding with search -> ai_summary
+        logger.info(f"[{'Fallback 2' if use_playwright else 'Primary'}] Trying Gemini grounding for: {url}")
         content = self._fetch_with_gemini_search(article)
         if content and len(content.strip()) > 100:
-            logger.info(f"[Fallback 3] ✅ Gemini grounding succeeded ({len(content)} chars)")
+            logger.info(f"[Fallback 2] ✅ Gemini grounding succeeded ({len(content)} chars)")
             article.ai_summary = content
             return True
 
@@ -121,78 +109,6 @@ class ContentFetcher:
                 
         except Exception as e:
             logger.warning(f"Playwright failed: {e}")
-            return None
-
-    def _fetch_with_scrapegraph(self, url: str) -> Optional[str]:
-        """Fetch content using ScrapegraphAI with Circuit LLM."""
-        try:
-            from scrapegraphai.graphs import SmartScraperGraph
-            from langchain_openai import AzureChatOpenAI
-        except ImportError:
-            logger.warning("ScrapegraphAI or langchain_openai not installed")
-            return None
-
-        try:
-            # Get Circuit token
-            circuit_token = self._get_circuit_token()
-            if not circuit_token:
-                return None
-
-            appkey = os.getenv("CIRCUIT_APPKEY")
-            
-            llm_instance = AzureChatOpenAI(
-                azure_endpoint="https://chat-ai.cisco.com/",
-                openai_api_version="2025-04-01-preview",
-                api_key=circuit_token,
-                model_name="gpt-5-nano",
-                temperature=0.0,
-                model_kwargs={"user": f'{{"appkey": "{appkey}"}}'}
-            )
-
-            graph_config = {
-                "llm": {
-                    "model_instance": llm_instance,
-                    "model_tokens": 128000
-                },
-                "loader_kwargs": {
-                    "timeout": 60,
-                    "load_state": "networkidle",
-                },
-                "verbose": False,
-                "headless": True
-            }
-
-            extraction_prompt = (
-                "Extract the full article text content from this page. "
-                "Return only the main article body text, excluding navigation, "
-                "headers, footers, and advertisements. "
-                "Return the content as plain text."
-            )
-
-            smart_scraper = SmartScraperGraph(
-                prompt=extraction_prompt,
-                source=url,
-                config=graph_config
-            )
-
-            result = smart_scraper.run()
-            
-            if isinstance(result, dict):
-                # Try common keys
-                for key in ["content", "text", "article", "body"]:
-                    if key in result and result[key]:
-                        return str(result[key])
-                # Return first non-empty string value
-                for v in result.values():
-                    if isinstance(v, str) and len(v) > 100:
-                        return v
-            elif isinstance(result, str):
-                return result
-                
-            return None
-
-        except Exception as e:
-            logger.warning(f"ScrapegraphAI failed: {e}")
             return None
 
     def _fetch_with_gemini_search(self, article: "ArticleItem") -> Optional[str]:
@@ -247,41 +163,6 @@ Be as comprehensive as possible - include all substantive information from the a
 
         except Exception as e:
             logger.warning(f"Gemini grounding failed: {e}")
-            return None
-
-    def _get_circuit_token(self) -> Optional[str]:
-        """Get or refresh Circuit API token."""
-        if self._circuit_token:
-            return self._circuit_token
-
-        client_id = os.getenv("CIRCUIT_CLIENT_ID")
-        client_secret = os.getenv("CIRCUIT_CLIENT_SECRET")
-
-        if not client_id or not client_secret:
-            logger.warning("Missing CIRCUIT_CLIENT_ID or CIRCUIT_CLIENT_SECRET")
-            return None
-
-        try:
-            url = "https://id.cisco.com/oauth2/default/v1/token"
-            payload = "grant_type=client_credentials"
-            value = base64.b64encode(
-                f"{client_id}:{client_secret}".encode("utf-8")
-            ).decode("utf-8")
-            
-            headers = {
-                "Accept": "*/*",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": f"Basic {value}"
-            }
-            
-            response = requests.post(url, headers=headers, data=payload)
-            response.raise_for_status()
-            
-            self._circuit_token = response.json().get("access_token")
-            return self._circuit_token
-
-        except Exception as e:
-            logger.warning(f"Circuit token fetch failed: {e}")
             return None
 
     def _extract_article_content(self, html: str) -> Optional[str]:
@@ -340,18 +221,19 @@ Be as comprehensive as possible - include all substantive information from the a
 
 
 # Convenience function
-def fetch_content_with_fallback(article: "ArticleItem") -> bool:
+def fetch_content_with_fallback(article: "ArticleItem", use_playwright: bool = True) -> bool:
     """Fetch article content using fallback chain.
     
     Modifies the article in-place:
     - Playwright success -> sets article.full_content
-    - ScrapegraphAI/Gemini success -> sets article.ai_summary
+    - Gemini grounding success -> sets article.ai_summary
     
     Args:
         article: ArticleItem to populate (must have url, optionally title)
+        use_playwright: If True, try Playwright first. If False, skip to Gemini.
         
     Returns:
         True if content was fetched, False otherwise.
     """
     fetcher = ContentFetcher()
-    return fetcher.fetch_content(article)
+    return fetcher.fetch_content(article, use_playwright=use_playwright)

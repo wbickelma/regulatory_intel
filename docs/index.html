@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regulatory Intelligence Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); }
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-shield-alt text-white text-2xl mr-3"></i>
+                    <span class="text-white text-xl font-bold">Regulatory Intelligence</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="showTab('users')" id="tab-users" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/20">
+                        <i class="fas fa-users mr-2"></i>Users
+                    </button>
+                    <button onclick="showTab('topics')" id="tab-topics" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/20">
+                        <i class="fas fa-tags mr-2"></i>Topics
+                    </button>
+                    <button onclick="showTab('sources')" id="tab-sources" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/20">
+                        <i class="fas fa-rss mr-2"></i>Sources
+                    </button>
+                    <button onclick="refreshData()" class="px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/20" title="Refresh Data">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Setup Banner (shown if no token) -->
+    <div id="setup-banner" class="hidden bg-yellow-100 border-l-4 border-yellow-500 p-4">
+        <div class="max-w-7xl mx-auto flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+            <div class="flex-1">
+                <p class="font-medium text-yellow-800">Setup Required</p>
+                <p class="text-sm text-yellow-700">Enter your GitHub token to enable add/delete actions.</p>
+            </div>
+            <button onclick="showSettings()" class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm">Configure</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Users Tab -->
+        <div id="content-users" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+                    <p class="text-gray-600 mt-1">Manage report recipients</p>
+                </div>
+                <button onclick="showAddUser()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">
+                    <i class="fas fa-plus mr-2"></i>Add User
+                </button>
+            </div>
+            <div id="users-table" class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-8 text-center text-gray-500">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Topics Tab -->
+        <div id="content-topics" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Topics</h1>
+                    <p class="text-gray-600 mt-1">Manage regulatory topics</p>
+                </div>
+                <button onclick="showAddTopic()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">
+                    <i class="fas fa-plus mr-2"></i>Add Topic
+                </button>
+            </div>
+            <div id="topics-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="col-span-full p-8 text-center text-gray-500">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Sources Tab -->
+        <div id="content-sources" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Sources</h1>
+                    <p class="text-gray-600 mt-1">Manage RSS feeds</p>
+                </div>
+                <button onclick="showAddSource()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">
+                    <i class="fas fa-plus mr-2"></i>Add Source
+                </button>
+            </div>
+            <div id="sources-table" class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-8 text-center text-gray-500">Loading...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div id="modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4"></div>
+    </div>
+
+    <!-- Status Toast -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50"></div>
+
+    <script>
+        // Config
+        const REPO_OWNER = 'wbickelm';  // Change to your GitHub username
+        const REPO_NAME = 'regulatory_intelligence';
+        const WORKFLOW_FILE = 'admin_action.yml';
+        
+        let data = { users: [], topics: [], sources: [], countries: [] };
+        let githubToken = localStorage.getItem('github_token') || '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSetup();
+            loadData();
+            showTab('users');
+        });
+
+        function checkSetup() {
+            document.getElementById('setup-banner').classList.toggle('hidden', !!githubToken);
+        }
+
+        async function loadData() {
+            try {
+                const resp = await fetch('data.json?' + Date.now());
+                if (resp.ok) {
+                    data = await resp.json();
+                    renderAll();
+                }
+            } catch (e) {
+                console.error('Failed to load data:', e);
+            }
+        }
+
+        function refreshData() {
+            showToast('Refreshing...', 'info');
+            loadData().then(() => showToast('Data refreshed!', 'success'));
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('bg-white', 'text-blue-900'));
+            document.getElementById('content-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('bg-white', 'text-blue-900');
+        }
+
+        function renderAll() {
+            renderUsers();
+            renderTopics();
+            renderSources();
+        }
+
+        // Users
+        function renderUsers() {
+            const container = document.getElementById('users-table');
+            if (!data.users.length) {
+                container.innerHTML = `<div class="p-12 text-center text-gray-500">
+                    <i class="fas fa-users text-4xl mb-3 text-gray-300"></i>
+                    <p>No users yet.</p>
+                </div>`;
+                return;
+            }
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Topics</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        ${data.users.map(u => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                            <span class="text-blue-600 font-semibold">${u.name[0]}</span>
+                                        </div>
+                                        <span class="font-medium text-gray-900">${u.name}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600">${u.email}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        ${u.topic_names.slice(0, 3).map(t => `
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800">${t}</span>
+                                        `).join('')}
+                                        ${u.topic_names.length > 3 ? `<span class="text-xs text-gray-500">+${u.topic_names.length - 3} more</span>` : ''}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <button onclick="deleteUser(${u.user_id}, '${u.name}')" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Topics
+        function renderTopics() {
+            const container = document.getElementById('topics-grid');
+            if (!data.topics.length) {
+                container.innerHTML = `<div class="col-span-full bg-white rounded-xl shadow-md p-12 text-center">
+                    <i class="fas fa-tags text-5xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">No topics yet.</p>
+                </div>`;
+                return;
+            }
+            container.innerHTML = data.topics.map(t => `
+                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4">
+                                <i class="fas fa-tag text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 text-lg">${t.topic_name}</h3>
+                                <p class="text-sm text-gray-500">${t.source_count} source${t.source_count !== 1 ? 's' : ''}</p>
+                            </div>
+                        </div>
+                        <button onclick="deleteTopic(${t.topic_id}, '${t.topic_name}')" class="text-gray-400 hover:text-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Sources
+        function renderSources() {
+            const container = document.getElementById('sources-table');
+            if (!data.sources.length) {
+                container.innerHTML = `<div class="p-12 text-center text-gray-500">
+                    <i class="fas fa-rss text-4xl mb-3 text-gray-300"></i>
+                    <p>No sources yet.</p>
+                </div>`;
+                return;
+            }
+            container.innerHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Source</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Feed URL</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Country</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        ${data.sources.map(s => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mr-3">
+                                            <i class="fas fa-rss text-orange-600"></i>
+                                        </div>
+                                        <span class="font-medium text-gray-900">${s.source_name}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <a href="${s.feed_url}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm truncate block max-w-xs">
+                                        ${s.feed_url.substring(0, 50)}${s.feed_url.length > 50 ? '...' : ''}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs bg-gray-100 text-gray-800">${s.country_code}</span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <button onclick="deleteSource(${s.source_id}, '${s.source_name}')" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Modal helpers
+        function showModal(html) {
+            document.getElementById('modal-content').innerHTML = html;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ' + 
+                (type === 'success' ? 'bg-green-600 text-white' : type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Settings
+        function showSettings() {
+            showModal(`
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Settings</h3>
+                    <button onclick="hideModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">GitHub Personal Access Token</label>
+                        <input type="password" id="input-token" value="${githubToken}" 
+                            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="ghp_xxxxxxxxxxxx">
+                        <p class="text-xs text-gray-500 mt-1">Needs <code>repo</code> and <code>workflow</code> scopes. <a href="https://github.com/settings/tokens/new" target="_blank" class="text-blue-600">Create token</a></p>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                        <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Save</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function saveSettings() {
+            githubToken = document.getElementById('input-token').value;
+            localStorage.setItem('github_token', githubToken);
+            hideModal();
+            checkSetup();
+            showToast('Settings saved!', 'success');
+        }
+
+        // Trigger GitHub Action
+        async function triggerAction(action, inputs) {
+            if (!githubToken) {
+                showSettings();
+                return false;
+            }
+            
+            showToast('Triggering action...', 'info');
+            
+            try {
+                const resp = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ref: 'main',
+                        inputs: { action, ...inputs }
+                    })
+                });
+                
+                if (resp.status === 204) {
+                    showToast('Action triggered! Data will update in ~30 seconds.', 'success');
+                    setTimeout(() => loadData(), 30000);
+                    return true;
+                } else {
+                    const err = await resp.json();
+                    showToast('Error: ' + (err.message || 'Unknown error'), 'error');
+                    return false;
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+                return false;
+            }
+        }
+
+        // Add User
+        function showAddUser() {
+            showModal(`
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Add New User</h3>
+                    <button onclick="hideModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input type="text" id="input-name" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="John Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="input-email" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="john@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subscribe to Topics</label>
+                        <div class="max-h-48 overflow-y-auto border rounded-lg p-3 space-y-2">
+                            ${data.topics.map(t => `
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="topic-checkbox rounded" value="${t.topic_id}">
+                                    <span class="ml-2 text-sm">${t.topic_name}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                        <button onclick="submitAddUser()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Add User</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        async function submitAddUser() {
+            const name = document.getElementById('input-name').value;
+            const email = document.getElementById('input-email').value;
+            const topics = [...document.querySelectorAll('.topic-checkbox:checked')].map(c => c.value).join(',');
+            
+            if (!name || !email) {
+                showToast('Name and email are required', 'error');
+                return;
+            }
+            
+            hideModal();
+            await triggerAction('add-user', { name, email, topics });
+        }
+
+        async function deleteUser(userId, name) {
+            if (!confirm(`Delete user "${name}"?`)) return;
+            await triggerAction('delete-user', { user_id: String(userId) });
+        }
+
+        // Add Topic
+        function showAddTopic() {
+            showModal(`
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Add New Topic</h3>
+                    <button onclick="hideModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Topic Name</label>
+                        <input type="text" id="input-topic-name" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., AI Governance">
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                        <button onclick="submitAddTopic()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Add Topic</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        async function submitAddTopic() {
+            const name = document.getElementById('input-topic-name').value;
+            if (!name) {
+                showToast('Topic name is required', 'error');
+                return;
+            }
+            hideModal();
+            await triggerAction('add-topic', { name });
+        }
+
+        async function deleteTopic(topicId, name) {
+            if (!confirm(`Delete topic "${name}"? This will remove all user subscriptions.`)) return;
+            await triggerAction('delete-topic', { topic_id: String(topicId) });
+        }
+
+        // Add Source
+        function showAddSource() {
+            showModal(`
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Add New Source</h3>
+                    <button onclick="hideModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Source Name</label>
+                        <input type="text" id="input-source-name" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., FCC News">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Website or RSS URL</label>
+                        <input type="url" id="input-source-url" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://example.com">
+                        <p class="text-xs text-gray-500 mt-1">If not an RSS feed, one will be created automatically</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                        <select id="input-source-country" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            ${data.countries.map(c => `<option value="${c.country_code}" ${c.country_code === 'US' ? 'selected' : ''}>${c.country_name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Assign to Topics</label>
+                        <div class="max-h-48 overflow-y-auto border rounded-lg p-3 space-y-2">
+                            ${data.topics.map(t => `
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="source-topic-checkbox rounded" value="${t.topic_id}">
+                                    <span class="ml-2 text-sm">${t.topic_name}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+                        <button onclick="submitAddSource()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Add Source</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        async function submitAddSource() {
+            const name = document.getElementById('input-source-name').value;
+            const url = document.getElementById('input-source-url').value;
+            const country = document.getElementById('input-source-country').value;
+            const topics = [...document.querySelectorAll('.source-topic-checkbox:checked')].map(c => c.value).join(',');
+            
+            if (!name || !url) {
+                showToast('Name and URL are required', 'error');
+                return;
+            }
+            
+            hideModal();
+            await triggerAction('add-source', { name, url, country, topics });
+        }
+
+        async function deleteSource(sourceId, name) {
+            if (!confirm(`Delete source "${name}"?`)) return;
+            await triggerAction('delete-source', { source_id: String(sourceId) });
+        }
+
+        // Close modal on overlay click
+        document.getElementById('modal-overlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) hideModal();
+        });
+    </script>
+</body>
+</html>

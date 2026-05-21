@@ -1,0 +1,97 @@
+name: Admin Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - sync
+          - add-user
+          - delete-user
+          - add-topic
+          - delete-topic
+          - add-source
+          - delete-source
+      name:
+        description: 'Name (for user/topic/source)'
+        required: false
+        type: string
+      email:
+        description: 'Email (for user)'
+        required: false
+        type: string
+      url:
+        description: 'URL (for source)'
+        required: false
+        type: string
+      country:
+        description: 'Country code (for source)'
+        required: false
+        default: 'US'
+        type: string
+      topics:
+        description: 'Topic IDs comma-separated'
+        required: false
+        type: string
+      user_id:
+        description: 'User ID (for delete)'
+        required: false
+        type: string
+      topic_id:
+        description: 'Topic ID (for delete)'
+        required: false
+        type: string
+      source_id:
+        description: 'Source ID (for delete)'
+        required: false
+        type: string
+
+jobs:
+  run-action:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run admin action
+        env:
+          GCS_CLIENT_EMAIL: ${{ secrets.GCS_CLIENT_EMAIL }}
+          GCS_PRIVATE_KEY: ${{ secrets.GCS_PRIVATE_KEY }}
+          GCS_PRIVATE_KEY_ID: ${{ secrets.GCS_PRIVATE_KEY_ID }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          RSS_APP_API_KEY: ${{ secrets.RSS_APP_API_KEY }}
+          CLIENT_ID_INOREADER: ${{ secrets.CLIENT_ID_INOREADER }}
+          CLIENT_SECRET_INOREADER: ${{ secrets.CLIENT_SECRET_INOREADER }}
+          INOREADER_ACCESS_TOKEN: ${{ secrets.INOREADER_ACCESS_TOKEN }}
+          INOREADER_REFRESH_TOKEN: ${{ secrets.INOREADER_REFRESH_TOKEN }}
+        run: |
+          python scripts/admin_action.py ${{ inputs.action }} \
+            ${{ inputs.name && format('--name "{0}"', inputs.name) || '' }} \
+            ${{ inputs.email && format('--email "{0}"', inputs.email) || '' }} \
+            ${{ inputs.url && format('--url "{0}"', inputs.url) || '' }} \
+            ${{ inputs.country && format('--country "{0}"', inputs.country) || '' }} \
+            ${{ inputs.topics && format('--topics "{0}"', inputs.topics) || '' }} \
+            ${{ inputs.user_id && format('--user-id {0}', inputs.user_id) || '' }} \
+            ${{ inputs.topic_id && format('--topic-id {0}', inputs.topic_id) || '' }} \
+            ${{ inputs.source_id && format('--source-id {0}', inputs.source_id) || '' }}
+      
+      - name: Commit and push data.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          git diff --staged --quiet || git commit -m "Update data.json via admin action"
+          git push

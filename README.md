@@ -99,6 +99,58 @@ Copy `.env.example` to `.env` and fill in your credentials:
 | `RSS_APP_KEY` | RSS.app API key |
 | `RSS_APP_SECRET` | RSS.app API secret |
 
+## Database Schema
+
+SQLite database stored in GCS (`regulatory.db`):
+
+```
+┌─────────────────┐       ┌─────────────────┐
+│   Countries     │       │     Topics      │
+├─────────────────┤       ├─────────────────┤
+│ country_code PK │       │ topic_id PK     │
+│ country_name    │       │ topic_name      │
+└────────┬────────┘       └────────┬────────┘
+         │                         │
+         │    ┌─────────────────┐  │
+         │    │    Sources      │  │
+         │    ├─────────────────┤  │
+         └───►│ source_id PK    │  │
+              │ source_name     │  │
+              │ country_code FK │  │
+              │ inoreader_stream│  │
+              │ feed_url        │  │
+              │ last_fetched_at │  │
+              │ is_active       │  │
+              └────────┬────────┘  │
+                       │           │
+              ┌────────▼───────────▼─┐
+              │   Source_Topics      │
+              ├──────────────────────┤
+              │ source_id FK         │
+              │ topic_id FK          │
+              │ (composite PK)       │
+              └──────────────────────┘
+```
+
+### Database Management
+
+```bash
+# Initialize DB from CSVs and upload to GCS
+python scripts/add_sqlite.py init
+
+# Download DB from GCS for local editing
+python scripts/add_sqlite.py download
+
+# Upload local changes back to GCS
+python scripts/add_sqlite.py upload
+
+# Show table row counts
+python scripts/add_sqlite.py stats
+
+# Delete local copy
+python scripts/add_sqlite.py delete
+```
+
 ## Usage
 
 ### Test the onboarding workflow

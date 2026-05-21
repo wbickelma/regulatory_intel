@@ -36,7 +36,7 @@ DATA_JSON = DOCS_DIR / "data.json"
 
 def get_rss_client():
     """Initialize RSS.app client."""
-    api_key = os.getenv("RSS_APP_API_KEY")
+    api_key = os.getenv("RSS_APP_KEY")
     if not api_key:
         return None
     return RssAppClient(api_key=api_key)
@@ -211,7 +211,7 @@ def add_source(db: DBClient, source_name: str, url: str, country_code: str, topi
             except Exception as e:
                 print(f"   ⚠ RSS.app error: {e}")
         else:
-            print("   ⚠ RSS_APP_API_KEY not set, using original URL")
+            print("   ⚠ RSS_APP_KEY not set, using original URL")
     else:
         print("   ✅ URL is already an RSS feed")
     

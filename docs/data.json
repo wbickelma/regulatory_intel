@@ -109,12 +109,12 @@
     {
       "topic_id": 1,
       "topic_name": "Antitrust",
-      "source_count": 8
+      "source_count": 9
     },
     {
       "topic_id": 4,
       "topic_name": "Cybersecurity",
-      "source_count": 6
+      "source_count": 7
     },
     {
       "topic_id": 2,
@@ -169,6 +169,13 @@
   ],
   "sources": [
     {
+      "source_id": 32,
+      "source_name": "Barnea",
+      "feed_url": "https://barlaw.co.il/practice_areas/high-tech/cyber/client_updates/",
+      "country_code": "US",
+      "is_active": true
+    },
+    {
       "source_id": 6,
       "source_name": "Bills Presented to the President",
       "feed_url": "https://www.congress.gov/rss/presented-to-president.xml",
@@ -187,6 +194,13 @@
       "source_name": "Canada News Centre - Innovation, Science and Economic Development Canada",
       "feed_url": "https://www.canada.ca/en/innovation-science-economic-development.atom.xml",
       "country_code": "JP",
+      "is_active": true
+    },
+    {
+      "source_id": 33,
+      "source_name": "Cnn Politics",
+      "feed_url": "https://rss.app/feeds/ahC19dyjK9apvVMm.xml",
+      "country_code": "US",
       "is_active": true
     },
     {

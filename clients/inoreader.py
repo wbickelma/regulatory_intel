@@ -133,9 +133,7 @@ class InoreaderAuthManager:
         self._access_token = data["access_token"]
         self._refresh_token = data.get("refresh_token", self._refresh_token)
         expires_in = data.get("expires_in", 3600)
-        self._expires_at = datetime.utcnow().replace(
-            second=datetime.utcnow().second + expires_in
-        )
+        self._expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
         self.save_tokens()
         logger.info("Inoreader access token refreshed")
         return self._access_token

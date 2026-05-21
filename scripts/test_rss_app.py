@@ -14,7 +14,7 @@ SOURCE_URL = (
 )
 
 def main():
-    api_key = os.getenv("RSS_APP_API_KEY")
+    api_key = os.getenv("RSS_APP_KEY")
     if not api_key:
         print("❌ RSS_APP_KEY environment variable not set")
         return

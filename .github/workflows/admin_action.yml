@@ -49,6 +49,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   run-action:
     runs-on: ubuntu-latest

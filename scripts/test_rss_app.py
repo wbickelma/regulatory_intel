@@ -3,7 +3,12 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 from clients.rss_app import RssAppClient
 
@@ -15,11 +20,16 @@ SOURCE_URL = (
 
 def main():
     api_key = os.getenv("RSS_APP_KEY")
+    api_secret = os.getenv("RSS_APP_SECRET")
+
     if not api_key:
         print("❌ RSS_APP_KEY environment variable not set")
         return
     
-    client = RssAppClient(api_key)
+    print(f"Using API key: {api_key[:8]}...{api_key[-4:]}")
+    print(f"Key length: {len(api_key)}")
+    
+    client = RssAppClient(api_key, api_secret)
     result = client.create_feed_sync(SOURCE_URL)
     
     if result:

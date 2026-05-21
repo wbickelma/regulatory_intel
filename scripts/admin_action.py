@@ -37,9 +37,10 @@ DATA_JSON = DOCS_DIR / "data.json"
 def get_rss_client():
     """Initialize RSS.app client."""
     api_key = os.getenv("RSS_APP_KEY")
+    api_secret = os.getenv("RSS_APP_SECRET")
     if not api_key:
         return None
-    return RssAppClient(api_key=api_key)
+    return RssAppClient(api_key=api_key, api_secret=api_secret)
 
 
 def get_inoreader_client():

@@ -342,38 +342,94 @@
             showToast('Settings saved!', 'success');
         }
 
-        // Trigger GitHub Action
+        // Trigger GitHub Action and poll for status
         async function triggerAction(action, inputs) {
             if (!githubToken) {
                 showSettings();
                 return false;
             }
             
+            const headers = {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json',
+            };
+            
             showToast('Triggering action...', 'info');
             
             try {
+                // Get current time to find our run
+                const triggerTime = new Date().toISOString();
+                
                 const resp = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `token ${githubToken}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json',
-                    },
+                    headers,
                     body: JSON.stringify({
                         ref: 'code-updates-for-demo',
                         inputs: { action, ...inputs }
                     })
                 });
                 
-                if (resp.status === 204) {
-                    showToast('Action triggered! Data will update in ~30 seconds.', 'success');
-                    setTimeout(() => loadData(), 30000);
-                    return true;
-                } else {
+                if (resp.status !== 204) {
                     const err = await resp.json();
                     showToast('Error: ' + (err.message || 'Unknown error'), 'error');
                     return false;
                 }
+                
+                showToast('⏳ Workflow started, waiting for completion...', 'info');
+                
+                // Poll for workflow run status
+                let runId = null;
+                let attempts = 0;
+                
+                // Wait for run to appear (up to 15 seconds)
+                while (!runId && attempts < 15) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    attempts++;
+                    
+                    const runsResp = await fetch(
+                        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=5`,
+                        { headers }
+                    );
+                    const runsData = await runsResp.json();
+                    const recentRun = runsData.workflow_runs?.find(r => 
+                        new Date(r.created_at) >= new Date(triggerTime)
+                    );
+                    if (recentRun) runId = recentRun.id;
+                }
+                
+                if (!runId) {
+                    showToast('⚠️ Could not find workflow run', 'error');
+                    return false;
+                }
+                
+                // Poll for completion (up to 2 minutes)
+                attempts = 0;
+                while (attempts < 60) {
+                    await new Promise(r => setTimeout(r, 2000));
+                    attempts++;
+                    
+                    const runResp = await fetch(
+                        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runs/${runId}`,
+                        { headers }
+                    );
+                    const runData = await runResp.json();
+                    
+                    if (runData.status === 'completed') {
+                        if (runData.conclusion === 'success') {
+                            showToast('✅ Action completed successfully!', 'success');
+                            loadData();
+                            return true;
+                        } else {
+                            showToast(`❌ Action failed: ${runData.conclusion}`, 'error');
+                            return false;
+                        }
+                    }
+                }
+                
+                showToast('⚠️ Timeout waiting for workflow', 'error');
+                return false;
+                
             } catch (e) {
                 showToast('Error: ' + e.message, 'error');
                 return false;

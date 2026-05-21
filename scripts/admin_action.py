@@ -47,9 +47,15 @@ def get_inoreader_client():
     """Initialize Inoreader client."""
     app_id = os.getenv("CLIENT_ID_INOREADER")
     app_key = os.getenv("CLIENT_SECRET_INOREADER")
+    access_token = os.getenv("INOREADER_ACCESS_TOKEN")
+    refresh_token = os.getenv("INOREADER_REFRESH_TOKEN")
     if not app_id or not app_key:
         return None
-    auth_manager = InoreaderAuthManager(app_id, app_key)
+    auth_manager = InoreaderAuthManager(
+        app_id, app_key,
+        access_token=access_token,
+        refresh_token=refresh_token
+    )
     return InoreaderClient(app_id, app_key, auth_manager)
 
 

@@ -19,12 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class FolderResponse:
-    folder_id: str
-    name: str
-
-
-@dataclass
 class SubscriptionResponse:
     subscription_id: str
     feed_url: str
@@ -59,16 +53,6 @@ class ArticleItem:
         if isinstance(pub, str):
             data["published_at"] = datetime.fromisoformat(pub)
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-
-
-@dataclass
-class ArticleContent:
-    item_id: str
-    title: str
-    url: str
-    published_at: datetime
-    content_html: str
-    content_text: str
 
 
 class InoreaderAuthManager:
@@ -277,24 +261,6 @@ class InoreaderClient:
         
         return self._client
     
-    async def create_folder(self, name: str) -> FolderResponse:
-        """Create a new folder (tag) for organizing feeds.
-        
-        Args:
-            name: Folder name (maps to a topic).
-            
-        Returns:
-            FolderResponse with the created folder ID.
-        """
-        client = await self._get_client()
-        tag_name = f"user/-/label/{name}"
-        response = await client.post(
-            "/edit-tag",
-            params={"a": tag_name}
-        )
-        response.raise_for_status()
-        return FolderResponse(folder_id=tag_name, name=name)
-    
     async def subscribe_to_feed(
         self, 
         feed_url: str, 
@@ -335,172 +301,7 @@ class InoreaderClient:
             title=title or data.get("streamName", "")
         )
     
-    async def get_folder_items(
-        self,
-        folder_id: str,
-        since: datetime,
-        until: Optional[datetime] = None,
-        count: int = 1000
-    ) -> list[ArticleItem]:
-        """Fetch article items from a folder within a date range.
-        
-        Args:
-            folder_id: The folder/tag ID.
-            since: Start of date range.
-            until: End of date range (defaults to now).
-            count: Maximum number of items to return.
-            
-        Returns:
-            List of ArticleItem objects.
-        """
-        client = await self._get_client()
-        params = {
-            "n": count,
-            "ot": int(since.timestamp())
-        }
-        if until:
-            params["nt"] = int(until.timestamp())
-            
-        response = await client.get(
-            f"/stream/contents/{folder_id}",
-            params=params
-        )
-        response.raise_for_status()
-        data = response.json()
-        
-        items = []
-        for item in data.get("items", []):
-            items.append(ArticleItem(
-                item_id=item["id"],
-                title=item.get("title", ""),
-                url=item.get("canonical", [{}])[0].get("href", ""),
-                published_at=datetime.fromtimestamp(item.get("published", 0)),
-                source=item.get("origin", {}).get("title"),
-                summary=item.get("summary", {}).get("content")
-            ))
-        return items
-    
-    async def get_article_content(self, item_id: str) -> ArticleContent:
-        """Get full article content for an item.
-        
-        Args:
-            item_id: The Inoreader item ID.
-            
-        Returns:
-            ArticleContent with full text.
-        """
-        client = await self._get_client()
-        response = await client.get(
-            "/stream/contents",
-            params={"i": item_id}
-        )
-        response.raise_for_status()
-        data = response.json()
-        
-        item = data.get("items", [{}])[0]
-        content = item.get("content", {}) or item.get("summary", {})
-        
-        return ArticleContent(
-            item_id=item_id,
-            title=item.get("title", ""),
-            url=item.get("canonical", [{}])[0].get("href", ""),
-            published_at=datetime.fromtimestamp(item.get("published", 0)),
-            content_html=content.get("content", ""),
-            content_text=self._strip_html(content.get("content", ""))
-        )
-    
-    async def unsubscribe(self, subscription_id: str) -> bool:
-        """Unsubscribe from a feed.
-        
-        Args:
-            subscription_id: The subscription/stream ID.
-            
-        Returns:
-            True if successful.
-        """
-        client = await self._get_client()
-        response = await client.post(
-            "/subscription/edit",
-            params={"ac": "unsubscribe", "s": subscription_id}
-        )
-        return response.status_code == 200
-    
-    @staticmethod
-    def _strip_html(html: str) -> str:
-        """Basic HTML tag stripping."""
-        import re
-        clean = re.sub(r'<[^>]+>', '', html)
-        return ' '.join(clean.split())
-    
-    # ========== SYNC METHODS FOR TESTING ==========
-    
-    def add_feed_to_folder_sync(
-        self,
-        feed_url: str,
-        folder_name: str
-    ) -> SubscriptionResponse | None:
-        """Subscribe to a feed and add to folder (sync version).
-        
-        Args:
-            feed_url: The RSS feed URL.
-            folder_name: Name of the folder/label.
-            
-        Returns:
-            SubscriptionResponse or None on failure.
-        """
-        access_token = self.auth_manager.get_access_token_sync()
-        headers = {"Authorization": f"Bearer {access_token}"}
-        
-        # Step 1: Subscribe via quickadd
-        print(f"\n--- Subscribing to {feed_url} ---")
-        add_response = requests.post(
-            f"{self.BASE_URL}/subscription/quickadd",
-            headers=headers,
-            data={
-                "quickadd": feed_url,
-                "AppId": self.app_id,
-                "AppKey": self.app_key
-            }
-        )
-        
-        if add_response.status_code != 200:
-            print(f"❌ Failed to subscribe: {add_response.text}")
-            return None
-        
-        try:
-            feed_id = add_response.json().get("streamId")
-            print(f"✅ Subscribed! Feed ID: {feed_id}")
-        except Exception as e:
-            print(f"❌ Could not parse response: {e}")
-            return None
-        
-        # Step 2: Tag with folder
-        print(f"\n--- Moving feed to folder: '{folder_name}' ---")
-        folder_tag = f"user/-/label/{folder_name}"
-        
-        edit_response = requests.post(
-            f"{self.BASE_URL}/subscription/edit",
-            headers=headers,
-            data={
-                "ac": "edit",
-                "s": feed_id,
-                "a": folder_tag,
-                "AppId": self.app_id,
-                "AppKey": self.app_key
-            }
-        )
-        
-        if edit_response.status_code == 200:
-            print(f"🚀 Successfully added feed to '{folder_name}'!")
-            return SubscriptionResponse(
-                subscription_id=feed_id,
-                feed_url=feed_url,
-                folder_id=folder_tag,
-                title=""
-            )
-        else:
-            print(f"❌ Failed to move to folder: {edit_response.text}")
-            return None
+    # ========== SYNC METHODS ==========
     
     def get_folder_articles_sync(
         self,

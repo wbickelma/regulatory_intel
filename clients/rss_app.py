@@ -1,14 +1,9 @@
 from __future__ import annotations
-"""RSS.app API client for generating RSS feeds from website URLs.
-
-Implements feed discovery before creation to avoid duplicates.
-Provides both sync and async methods for flexibility.
-"""
+"""RSS.app API client for generating RSS feeds from website URLs."""
 
 import logging
 from dataclasses import dataclass
 from typing import Optional
-import httpx
 import requests
 
 logger = logging.getLogger(__name__)
@@ -24,24 +19,10 @@ class FeedResponse:
     is_existing: bool = False
 
 
-@dataclass
-class FeedStatus:
-    feed_id: str
-    is_active: bool
-    last_fetch: Optional[str]
-    item_count: int
-
-
 class RssAppClient:
     """Client for RSS.app API.
     
-    Implements the feed discovery workflow:
-    1. Search for existing feed matches
-    2. Create new feed only if no match found
-    
     API Docs: https://rss.app/docs/api
-    
-    Note: Authentication uses Bearer token with format "key:secret"
     """
     
     BASE_URL = "https://api.rss.app/v1"
@@ -57,123 +38,6 @@ class RssAppClient:
             self.auth_token = f"{api_key}:{api_secret}"
         else:
             self.auth_token = api_key
-            
-        self._client = httpx.AsyncClient(
-            base_url=self.BASE_URL,
-            headers={
-                "Authorization": f"Bearer {self.auth_token}",
-                "Content-Type": "application/json"
-            }
-        )
-    
-    async def search_existing_feed(self, url: str) -> FeedResponse | None:
-        """Search for an existing feed for this URL.
-        
-        Args:
-            url: The source website URL.
-            
-        Returns:
-            FeedResponse if found, None otherwise.
-        """
-        try:
-            response = await self._client.get(
-                "/feeds",
-                params={"url": url}
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            feeds = data.get("feeds", [])
-            if feeds:
-                feed = feeds[0]
-                logger.info(f"Found existing feed for {url}")
-                return FeedResponse(
-                    feed_id=feed["id"],
-                    feed_url=feed["feed_url"],
-                    source_url=url,
-                    status=feed.get("status", "active"),
-                    is_existing=True
-                )
-        except httpx.HTTPStatusError:
-            pass
-        
-        return None
-    
-    async def get_or_create_feed(self, url: str) -> FeedResponse:
-        """Get existing feed or create new one for a URL.
-        
-        This is the primary method to use. It implements the workflow:
-        1. Search for existing feed matches
-        2. Create new feed only if no match found
-        
-        Args:
-            url: The source website URL.
-            
-        Returns:
-            FeedResponse (existing or newly created).
-        """
-        existing = await self.search_existing_feed(url)
-        if existing:
-            return existing
-        
-        logger.info(f"Creating new feed for {url}")
-        return await self._create_feed(url)
-    
-    async def _create_feed(self, url: str) -> FeedResponse:
-        """Create a new RSS feed (internal, use get_or_create_feed).
-        
-        Args:
-            url: The source website URL to create a feed from.
-            
-        Returns:
-            FeedResponse with the generated feed URL.
-        """
-        response = await self._client.post(
-            "/feeds",
-            json={"url": url}
-        )
-        response.raise_for_status()
-        data = response.json()
-        return FeedResponse(
-            feed_id=data["id"],
-            feed_url=data["feed_url"],
-            source_url=url,
-            status=data.get("status", "active"),
-            is_existing=False
-        )
-    
-    async def get_feed_status(self, feed_id: str) -> FeedStatus:
-        """Check the health status of a feed.
-        
-        Args:
-            feed_id: The RSS.app feed ID.
-            
-        Returns:
-            FeedStatus with current feed health info.
-        """
-        response = await self._client.get(f"/feeds/{feed_id}")
-        response.raise_for_status()
-        data = response.json()
-        return FeedStatus(
-            feed_id=feed_id,
-            is_active=data.get("is_active", True),
-            last_fetch=data.get("last_fetch"),
-            item_count=data.get("item_count", 0)
-        )
-    
-    async def delete_feed(self, feed_id: str) -> bool:
-        """Delete a feed.
-        
-        Args:
-            feed_id: The RSS.app feed ID.
-            
-        Returns:
-            True if deletion was successful.
-        """
-        response = await self._client.delete(f"/feeds/{feed_id}")
-        return response.status_code == 204
-    
-    # ========== SYNC METHODS FOR TESTING ==========
     
     def create_feed_sync(self, source_url: str) -> FeedResponse | None:
         """Generate an RSS feed from a URL (sync version).
@@ -222,12 +86,3 @@ class RssAppClient:
             print(f"❌ Error {response.status_code}: {response.text}")
         
         return None
-    
-    async def close(self):
-        await self._client.aclose()
-    
-    async def __aenter__(self):
-        return self
-    
-    async def __aexit__(self, *args):
-        await self.close()

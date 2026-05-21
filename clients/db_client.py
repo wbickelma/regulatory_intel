@@ -188,20 +188,6 @@ class DBClient:
             cursor = conn.execute(query)
             return [self._row_to_source(row) for row in cursor.fetchall()]
     
-    def get_source_by_stream_id(self, stream_id: str) -> Optional[Source]:
-        """Get a source by its Inoreader stream ID."""
-        with self.connection() as conn:
-            cursor = conn.execute("""
-                SELECT source_id, source_name, country_code, 
-                       inoreader_stream_id, feed_url, last_fetched_at, is_active
-                FROM Sources
-                WHERE inoreader_stream_id = ?
-            """, (stream_id,))
-            row = cursor.fetchone()
-            if row:
-                return self._row_to_source(row)
-            return None
-    
     def add_source(
         self,
         source_name: str,
@@ -234,38 +220,6 @@ class DBClient:
             
             return source_id
     
-    def add_source_to_topic(self, source_id: int, topic_id: int):
-        """Link an existing source to a topic."""
-        with self.connection() as conn:
-            conn.execute(
-                "INSERT OR IGNORE INTO Source_Topics (source_id, topic_id) VALUES (?, ?)",
-                (source_id, topic_id)
-            )
-    
-    def update_source_last_fetched(self, source_id: int, timestamp: str):
-        """Update the last_fetched_at timestamp for a source."""
-        with self.connection() as conn:
-            conn.execute(
-                "UPDATE Sources SET last_fetched_at = ? WHERE source_id = ?",
-                (timestamp, source_id)
-            )
-    
-    def deactivate_source(self, source_id: int):
-        """Mark a source as inactive."""
-        with self.connection() as conn:
-            conn.execute(
-                "UPDATE Sources SET is_active = 0 WHERE source_id = ?",
-                (source_id,)
-            )
-    
-    def activate_source(self, source_id: int):
-        """Mark a source as active."""
-        with self.connection() as conn:
-            conn.execute(
-                "UPDATE Sources SET is_active = 1 WHERE source_id = ?",
-                (source_id,)
-            )
-    
     # ==================== Country Operations ====================
     
     def get_all_countries(self) -> List[Dict[str, str]]:
@@ -273,14 +227,6 @@ class DBClient:
         with self.connection() as conn:
             cursor = conn.execute("SELECT country_code, country_name FROM Countries ORDER BY country_name")
             return [dict(row) for row in cursor.fetchall()]
-    
-    def add_country(self, country_code: str, country_name: str):
-        """Add a new country."""
-        with self.connection() as conn:
-            conn.execute(
-                "INSERT OR IGNORE INTO Countries (country_code, country_name) VALUES (?, ?)",
-                (country_code, country_name)
-            )
     
     # ==================== Utility ====================
     

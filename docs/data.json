@@ -109,7 +109,7 @@
     {
       "topic_id": 1,
       "topic_name": "Antitrust",
-      "source_count": 8
+      "source_count": 7
     },
     {
       "topic_id": 4,
@@ -187,13 +187,6 @@
       "source_name": "Canada Gazette - Part I",
       "feed_url": "https://www.gazette.gc.ca/rss/p1-eng.xml",
       "country_code": "CA",
-      "is_active": true
-    },
-    {
-      "source_id": 33,
-      "source_name": "Cnn Politics",
-      "feed_url": "https://rss.app/feeds/ahC19dyjK9apvVMm.xml",
-      "country_code": "US",
       "is_active": true
     },
     {
